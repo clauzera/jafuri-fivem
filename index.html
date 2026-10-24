@@ -42,6 +42,35 @@
         </div>
       </div>
     </div>
+    <!-- Modal Import / Export JSON -->
+    <div id="importExportModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-cardBg border border-borderCol rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-150">
+        <div class="flex justify-between items-center pb-2 border-b border-borderCol">
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <svg class="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+            Import Date (Cod JSON de la AI)
+          </h3>
+          <button onclick="closeImportExportModal()" class="text-zinc-400 hover:text-white p-1 rounded">✕</button>
+        </div>
+        
+        <p class="text-xs text-zinc-300">
+          Lipește mai jos codul JSON generat de AI pe baza screenshot-ului tău:
+        </p>
+
+        <textarea id="importTextarea" rows="8" placeholder='Lipește aici codul JSON primit (ex: [{"bank":"Highway","mafia":"@LOWLiNE","time":"2026-10-26T22:00"}])' class="w-full bg-black/70 border border-borderCol rounded-xl p-3 text-xs font-mono text-brand focus:outline-none focus:border-brand"></textarea>
+
+        <div id="importErrorMsg" class="text-xs text-red-400 hidden"></div>
+
+        <div class="flex flex-col sm:flex-row gap-2 pt-2">
+          <button onclick="executeImport(true)" class="flex-1 px-4 py-2 text-xs bg-brand hover:bg-brandDark text-black font-bold rounded-lg transition shadow-lg shadow-brand/20">
+            Înlocuiește tot tabelul
+          </button>
+          <button onclick="executeImport(false)" class="flex-1 px-4 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-semibold rounded-lg transition border border-borderCol">
+            + Adaugă la cele existente
+          </button>
+        </div>
+      </div>
+    </div>
 
   <div class="max-w-6xl mx-auto space-y-6">
 
@@ -63,12 +92,19 @@
         </p>
       </div>
 
-      <div class="flex gap-2">
-        <button onclick="loadDemoData()" class="px-3.5 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg border border-zinc-700 transition font-medium">
-          Reîncarcă date demo
+      <div class="flex flex-wrap gap-2">
+        <button onclick="openImportModal()" class="px-3.5 py-2 text-xs bg-brand/10 hover:bg-brand/20 text-brand rounded-lg border border-brand/40 transition font-bold flex items-center gap-1.5 shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+          Import Date (JSON)
         </button>
-        <button onclick="openClearModal()" class="px-3.5 py-2 text-xs bg-red-950/40 hover:bg-red-900/50 text-red-400 border border-red-900/50 rounded-lg transition font-medium">
-          Golește tabel
+        <button onclick="exportCurrentData()" class="px-3 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg border border-zinc-700 transition font-medium">
+          Copiază Date (Export)
+        </button>
+        <button onclick="loadDemoData()" class="px-3 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg border border-zinc-700 transition font-medium">
+          Reîncarcă demo
+        </button>
+        <button onclick="openClearModal()" class="px-3 py-2 text-xs bg-red-950/40 hover:bg-red-900/50 text-red-400 border border-red-900/50 rounded-lg transition font-medium">
+          Golește
         </button>
       </div>
     </header>
@@ -390,6 +426,78 @@ function openClearModal() {
 
     function closeClearModal() {
       document.getElementById('clearConfirmModal').classList.add('hidden');
+    }
+
+    function openImportModal() {
+      document.getElementById('importTextarea').value = '';
+      document.getElementById('importErrorMsg').classList.add('hidden');
+      document.getElementById('importExportModal').classList.remove('hidden');
+    }
+
+    function closeImportExportModal() {
+      document.getElementById('importExportModal').classList.add('hidden');
+    }
+
+    function exportCurrentData() {
+      const dataStr = JSON.stringify(robberies, null, 2);
+      navigator.clipboard.writeText(dataStr).then(() => {
+        alert("Toate datele curente au fost copiate în clipboard sub formă de JSON!");
+      });
+    }
+
+    function executeImport(replaceAll = true) {
+      const raw = document.getElementById('importTextarea').value.trim();
+      const errBox = document.getElementById('importErrorMsg');
+      errBox.classList.add('hidden');
+
+      if (!raw) {
+        errBox.textContent = "Te rog lipește codul JSON mai sus.";
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) {
+          throw new Error("Datele trebuie să fie o listă [ ... ] de jafuri.");
+        }
+
+        const validItems = [];
+        let baseId = Date.now();
+
+        parsed.forEach((item, index) => {
+          if (!item.bank || !item.time) {
+            throw new Error(`Elementul ${index + 1} nu are 'bank' sau 'time' definit corect.`);
+          }
+          validItems.push({
+            id: item.id || (baseId + index),
+            bank: item.bank,
+            mafia: item.mafia || "@LOWLiNE",
+            time: item.time,
+            createdAt: item.createdAt || (baseId + index)
+          });
+        });
+
+        if (replaceAll) {
+          robberies = validItems;
+        } else {
+          // Adăugăm doar cele care nu există deja identice ca bancă și oră
+          validItems.forEach(newItem => {
+            const exists = robberies.some(r => r.bank.toLowerCase() === newItem.bank.toLowerCase() && r.time === newItem.time);
+            if (!exists) {
+              robberies.push(newItem);
+            }
+          });
+        }
+
+        robberies.sort((a, b) => new Date(a.time) - new Date(b.time));
+        saveData();
+        render();
+        closeImportExportModal();
+      } catch (err) {
+        errBox.textContent = "Format JSON invalid: " + err.message;
+        errBox.classList.remove('hidden');
+      }
     }
 
     function executeClearAllData() {
