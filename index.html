@@ -229,7 +229,7 @@
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-bold text-white flex items-center gap-2">
               <svg class="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-              Status Cele 5 Bănci (Disponibilitate)
+              Status Cele 7 Bănci (Disponibilitate)
             </h2>
             <span class="text-xs text-zinc-400">Cooldown bidirecțional</span>
           </div>
@@ -270,10 +270,12 @@
               <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Selectează Banca</label>
               <select id="calcBank" class="w-full bg-zinc-900 border border-borderCol rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand">
                 <option value="Dusty">Dusty (24h)</option>
+                <option value="Fleeca centrala">Fleeca centrala (24h)</option>
                 <option value="Burton">Burton (24h)</option>
                 <option value="Pillbox">Pillbox (24h)</option>
                 <option value="Highway">Highway (24h)</option>
                 <option value="Paleto">Paleto (72h / 3 Zile)</option>
+                <option value="Cartele">Cartele (24h)</option>
               </select>
             </div>
 
@@ -335,10 +337,12 @@ Data/ora: 26.10.2026 00:30</pre>
           <label class="block text-xs font-medium text-zinc-400 mb-1">Bancă</label>
           <select id="newBank" required class="w-full bg-black/60 border border-borderCol rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand">
             <option value="Dusty">Dusty</option>
+            <option value="Fleeca centrala">Fleeca centrala</option>
             <option value="Burton">Burton</option>
             <option value="Pillbox">Pillbox</option>
             <option value="Highway">Highway</option>
             <option value="Paleto">Paleto (3 zile CD)</option>
+            <option value="Cartele">Cartele</option>
           </select>
         </div>
 
@@ -400,11 +404,13 @@ Data/ora: 26.10.2026 00:30</pre>
     };
 
     const BANKS = [
-      { name: "Dusty", cdHours: 24 },
-      { name: "Burton", cdHours: 24 },
-      { name: "Pillbox", cdHours: 24 },
-      { name: "Highway", cdHours: 24 },
-      { name: "Paleto", cdHours: 72 } // 3 Zile CD
+      { name: "Dusty", cdHours: 24, showInWindows: true },
+      { name: "Burton", cdHours: 24, showInWindows: true },
+      { name: "Pillbox", cdHours: 24, showInWindows: true },
+      { name: "Highway", cdHours: 24, showInWindows: true },
+      { name: "Paleto", cdHours: 72, showInWindows: true }, // 3 Zile CD
+      { name: "Fleeca centrala", cdHours: 24, showInWindows: false },
+      { name: "Cartele", cdHours: 24, showInWindows: false }
     ];
 
     const DEFAULT_ROBBERIES = [
@@ -988,6 +994,7 @@ Data/ora: ${formatRO(dateObj)}`;
 
           const availableBanks = [];
           BANKS.forEach(b => {
+            if (b.showInWindows === false) return; // Exclude Fleeca centrala și Cartele de la recomandările de ferestre
             const res = checkSlotConflict(b.name, midPointMs);
             if (!res.conflict) {
               availableBanks.push(b.name);
