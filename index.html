@@ -22,7 +22,28 @@
   </script>
 </head>
 <body class="bg-darkBg text-zinc-200 min-h-screen p-4 md:p-8 font-sans">
-      <!-- Modal Confirmare Golire Tabel -->
+          <!-- Modal Confirmare Reîncărcare Demo -->
+    <div id="demoConfirmModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-cardBg border border-amber-900/60 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-center animate-in fade-in zoom-in duration-150">
+        <div class="w-12 h-12 rounded-full bg-amber-950/60 border border-amber-800 text-amber-400 mx-auto flex items-center justify-center">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-white">Reîncarci datele demo?</h3>
+          <p class="text-xs text-zinc-400 mt-1">Această acțiune va înlocui datele tale curente cu lista demo implicită. Jafurile introduse manual vor fi suprascrise.</p>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button onclick="closeDemoModal()" class="flex-1 px-4 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition font-medium border border-borderCol">
+            Anulează
+          </button>
+          <button onclick="executeLoadDemoData()" class="flex-1 px-4 py-2 text-xs bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition font-bold shadow-lg shadow-amber-900/30">
+            Da, Încarcă Demo
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Confirmare Golire Tabel -->
     <div id="clearConfirmModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
       <div class="bg-cardBg border border-red-900/60 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-center animate-in fade-in zoom-in duration-150">
         <div class="w-12 h-12 rounded-full bg-red-950/60 border border-red-800 text-red-400 mx-auto flex items-center justify-center">
@@ -100,7 +121,7 @@
         <button onclick="exportCurrentData()" class="px-3 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg border border-zinc-700 transition font-medium">
           Copiază Date (Export)
         </button>
-        <button onclick="loadDemoData()" class="px-3 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg border border-zinc-700 transition font-medium">
+        <button onclick="openDemoModal()" class="px-3 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg border border-zinc-700 transition font-medium">
           Reîncarcă demo
         </button>
         <button onclick="openClearModal()" class="px-3 py-2 text-xs bg-red-950/40 hover:bg-red-900/50 text-red-400 border border-red-900/50 rounded-lg transition font-medium">
@@ -181,7 +202,7 @@
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-bold text-white flex items-center gap-2">
               <svg class="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-              Status Cele 7 Bănci (Disponibilitate)
+              Status Cele 5 Bănci (Disponibilitate)
             </h2>
             <span class="text-xs text-zinc-400">Cooldown bidirecțional</span>
           </div>
@@ -222,13 +243,11 @@
               <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Selectează Banca</label>
               <select id="calcBank" class="w-full bg-zinc-900 border border-borderCol rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand">
                 <option value="Dusty">Dusty (24h)</option>
-                <option value="Fleeca centrala">Fleeca centrala (24h)</option>
                 <option value="Burton">Burton (24h)</option>
                 <option value="Pillbox">Pillbox (24h)</option>
                 <option value="Highway">Highway (24h)</option>
                 <option value="Paleto">Paleto (72h / 3 Zile)</option>
-                <option value="Cartele">Cartele (24h)</option>
-              </select>
+                </select>
             </div>
 
             <div class="grid grid-cols-2 gap-2">
@@ -289,13 +308,11 @@ Data/ora: 26.10.2026 00:30</pre>
           <label class="block text-xs font-medium text-zinc-400 mb-1">Bancă</label>
           <select id="newBank" required class="w-full bg-black/60 border border-borderCol rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand">
             <option value="Dusty">Dusty</option>
-            <option value="Fleeca centrala">Fleeca centrala</option>
             <option value="Burton">Burton</option>
             <option value="Pillbox">Pillbox</option>
             <option value="Highway">Highway</option>
             <option value="Paleto">Paleto (3 zile CD)</option>
-            <option value="Cartele">Cartele</option>
-          </select>
+            </select>
         </div>
 
         <div class="sm:col-span-1">
@@ -345,16 +362,13 @@ Data/ora: 26.10.2026 00:30</pre>
   <script>
     const BANKS = [
       { name: "Dusty", cdHours: 24 },
-      { name: "Fleeca centrala", cdHours: 24 },
       { name: "Burton", cdHours: 24 },
       { name: "Pillbox", cdHours: 24 },
       { name: "Highway", cdHours: 24 },
-      { name: "Paleto", cdHours: 72 }, // 3 Zile CD
-      { name: "Cartele", cdHours: 24 }
+      { name: "Paleto", cdHours: 72 } // 3 Zile CD
     ];
 
     const DEFAULT_ROBBERIES = [
-      { id: 101, bank: "Cartele", mafia: "cartel", time: "2026-10-24T00:15", createdAt: 1729725300000 },
       { id: 102, bank: "Pillbox", mafia: "gsb", time: "2026-10-24T01:15", createdAt: 1729728900000 },
       { id: 103, bank: "Highway", mafia: "a", time: "2026-10-24T22:00", createdAt: 1729803600000 },
       { id: 104, bank: "Burton", mafia: "medel", time: "2026-10-25T00:30", createdAt: 1729812600000 },
@@ -414,10 +428,19 @@ Data/ora: 26.10.2026 00:30</pre>
       localStorage.setItem('fivem_robberies_lowline', JSON.stringify(robberies));
     }
 
-    function loadDemoData() {
+function openDemoModal() {
+      document.getElementById('demoConfirmModal').classList.remove('hidden');
+    }
+
+    function closeDemoModal() {
+      document.getElementById('demoConfirmModal').classList.add('hidden');
+    }
+
+    function executeLoadDemoData() {
       robberies = [...DEFAULT_ROBBERIES];
       saveData();
       render();
+      closeDemoModal();
     }
 
 function openClearModal() {
@@ -785,7 +808,7 @@ Data/ora: ${formatRO(dateObj)}`;
           const midPointMs = windowStartMs + (diffMs / 2);
           const midDate = new Date(midPointMs);
 
-          // Verificăm care dintre cele 7 bănci sunt libere la mijlocul acestei ferestre
+          // Verificăm care dintre cele 5 bănci sunt libere la mijlocul acestei ferestre
           const availableBanks = [];
           BANKS.forEach(b => {
             const res = checkSlotConflict(b.name, midPointMs);
