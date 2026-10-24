@@ -344,7 +344,7 @@ Data/ora: 26.10.2026 00:30</pre>
             <tr>
               <th class="py-3 px-4">Bancă</th>
               <th class="py-3 px-4">Mafie</th>
-              <th class="py-3 px-4">Data & Ora (24H)</th>
+              <th class="py-3 px-4">Data & Ora (24H) ↓</th>
               <th class="py-3 px-4">Interval Cooldown Generat</th>
               <th class="py-3 px-4">Status / Intersecție</th>
               <th class="py-3 px-4 text-right">Acțiuni</th>
@@ -770,7 +770,7 @@ Data/ora: ${formatRO(dateObj)}`;
       window.scrollTo({ top: 400, behavior: 'smooth' });
     }
 
-    // CALCULATOR AUTOMAT DE FERESTRE LIBERE ÎNTRE JAFURI
+    // CALCULATOR AUTOMAT DE FERESTRE LIBERE ÎNTRE JAFURI (DOAR ACTIVE / VIITOARE)
     function renderFreeWindows() {
       const container = document.getElementById('windowsContainer');
       container.innerHTML = '';
@@ -780,8 +780,9 @@ Data/ora: ${formatRO(dateObj)}`;
         return;
       }
 
-      // Sortate strict cronologic
+      // Sortate strict cronologic pentru calculul intervalelor dintre ele
       const sorted = [...robberies].sort((a, b) => new Date(a.time) - new Date(b.time));
+      const nowMs = Date.now();
 
       let foundWindows = 0;
 
@@ -793,11 +794,22 @@ Data/ora: ${formatRO(dateObj)}`;
         const nextTime = new Date(next.time).getTime();
 
         // Fereastra legală pe oraș începe la +1h după jaful curent și se termină la -1h înainte de următorul jaf
-        const windowStartMs = curTime + (60 * 60 * 1000);
+        let windowStartMs = curTime + (60 * 60 * 1000);
         const windowEndMs = nextTime - (60 * 60 * 1000);
+
+        // Dacă fereastra a expirat deja în trecut, o ignorăm complet (fără ferestre trecute/inutile)
+        if (windowEndMs <= nowMs) {
+          continue;
+        }
+
+        // Dacă fereastra e în curs acum, începem disponibilitatea de la momentul actual
+        if (windowStartMs < nowMs) {
+          windowStartMs = nowMs;
+        }
+
         const diffMs = windowEndMs - windowStartMs;
 
-        // Dacă avem minim 30 minute de pauză reală între ele
+        // Dacă au mai rămas minim 30 minute disponibile
         if (diffMs >= 30 * 60 * 1000) {
           foundWindows++;
           const durationHours = (diffMs / (3600 * 1000)).toFixed(1);
@@ -959,7 +971,10 @@ Data/ora: ${formatRO(dateObj)}`;
       const latestObj = [...robberies].sort((a, b) => (b.createdAt || b.id) - (a.createdAt || a.id))[0];
       const conflictMessagesGlobal = [];
 
-      robberies.forEach(r => {
+      // Sortare descrescătoare (cele mai noi / din viitor apar primele sus)
+      const displayRobberies = [...robberies].sort((a, b) => new Date(b.time) - new Date(a.time));
+
+      displayRobberies.forEach(r => {
         const bankConfig = BANKS.find(b => b.name === r.bank) || { cdHours: 24 };
         const d = new Date(r.time);
         const startCd = new Date(d.getTime() - bankConfig.cdHours * 3600 * 1000);
