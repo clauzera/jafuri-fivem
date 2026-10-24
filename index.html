@@ -22,6 +22,27 @@
   </script>
 </head>
 <body class="bg-darkBg text-zinc-200 min-h-screen p-4 md:p-8 font-sans">
+      <!-- Modal Confirmare Golire Tabel -->
+    <div id="clearConfirmModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+      <div class="bg-cardBg border border-red-900/60 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-center animate-in fade-in zoom-in duration-150">
+        <div class="w-12 h-12 rounded-full bg-red-950/60 border border-red-800 text-red-400 mx-auto flex items-center justify-center">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-white">Ești sigur că vrei să golești tabelul?</h3>
+          <p class="text-xs text-zinc-400 mt-1">Toate jafurile înregistrate vor fi șterse definitiv din memorie. Vei putea reîncărca oricând datele demo dacă dorești.</p>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button onclick="closeClearModal()" class="flex-1 px-4 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition font-medium border border-borderCol">
+            Anulează
+          </button>
+          <button onclick="executeClearAllData()" class="flex-1 px-4 py-2 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg transition font-bold shadow-lg shadow-red-900/30">
+            Da, Golește Tot
+          </button>
+        </div>
+      </div>
+    </div>
+
   <div class="max-w-6xl mx-auto space-y-6">
 
     <!-- Header -->
@@ -46,7 +67,7 @@
         <button onclick="loadDemoData()" class="px-3.5 py-2 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg border border-zinc-700 transition font-medium">
           Reîncarcă date demo
         </button>
-        <button onclick="clearAllData()" class="px-3.5 py-2 text-xs bg-red-950/40 hover:bg-red-900/50 text-red-400 border border-red-900/50 rounded-lg transition font-medium">
+        <button onclick="openClearModal()" class="px-3.5 py-2 text-xs bg-red-950/40 hover:bg-red-900/50 text-red-400 border border-red-900/50 rounded-lg transition font-medium">
           Golește tabel
         </button>
       </div>
@@ -89,6 +110,29 @@
           <ul id="conflictsList" class="text-xs text-red-200 mt-2 list-disc list-inside space-y-1 font-mono">
           </ul>
         </div>
+      </div>
+    </div>
+
+    <!-- SECȚIUNE NOUĂ: FERESTRE LIBERE ÎNTRE JAFURI (DISPONIBILITĂȚI REALE PE ORAȘ) -->
+    <div class="bg-cardBg border border-emerald-500/30 rounded-2xl p-6 shadow-xl space-y-4">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+        <div class="flex items-center gap-3">
+          <div class="p-2 bg-emerald-500/20 text-emerald-400 rounded-xl">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </div>
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              Ferestre Libere Între Jafuri (Intervale Disponibile)
+              <span class="text-xs bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-800">Calculat Automat</span>
+            </h2>
+            <p class="text-xs text-zinc-400">Pauzele reale din oraș de minim 1 oră dintre jafurile programate și ce bănci sunt 100% legale de băgat în ele.</p>
+          </div>
+        </div>
+        <span class="text-xs text-zinc-400 font-mono">Pauză oraș: &plusmn;1h garantată</span>
+      </div>
+
+      <div id="windowsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-2">
+        <!-- Generat dinamic -->
       </div>
     </div>
 
@@ -273,7 +317,6 @@ Data/ora: 26.10.2026 00:30</pre>
       { name: "Cartele", cdHours: 24 }
     ];
 
-    // Jafurile din screenshot-ul tău complet
     const DEFAULT_ROBBERIES = [
       { id: 101, bank: "Cartele", mafia: "cartel", time: "2026-10-24T00:15", createdAt: 1729725300000 },
       { id: 102, bank: "Pillbox", mafia: "gsb", time: "2026-10-24T01:15", createdAt: 1729728900000 },
@@ -317,12 +360,15 @@ Data/ora: 26.10.2026 00:30</pre>
 
       setupTimeAutoFormat('newTime');
       setupTimeAutoFormat('calcTime');
+      document.getElementById('calcBank').addEventListener('change', () => {
+        findNearestFree(true);
+      });
 
       const todayIso = new Date().toISOString().slice(0, 10);
       document.getElementById('newDate').value = todayIso;
       document.getElementById('newTime').value = "22:00";
 
-      document.getElementById('calcDate').value = "2026-10-28";
+      document.getElementById('calcDate').value = "2026-10-27";
       document.getElementById('calcTime').value = "15:00";
 
       render();
@@ -338,12 +384,19 @@ Data/ora: 26.10.2026 00:30</pre>
       render();
     }
 
-    function clearAllData() {
-      if (confirm("Sigur vrei să ștergi toate jafurile din tabel?")) {
-        robberies = [];
-        saveData();
-        render();
-      }
+function openClearModal() {
+      document.getElementById('clearConfirmModal').classList.remove('hidden');
+    }
+
+    function closeClearModal() {
+      document.getElementById('clearConfirmModal').classList.add('hidden');
+    }
+
+    function executeClearAllData() {
+      robberies = [];
+      saveData();
+      render();
+      closeClearModal();
     }
 
     function deleteRobbery(id) {
@@ -398,12 +451,17 @@ Data/ora: 26.10.2026 00:30</pre>
       return `${d}.${m}.${y} ${h}:${min}`;
     }
 
-    // Funcție dedicată detectării intersecțiilor / conflictelor între jafurile din tabel
+    function formatTimeOnly(dateObj) {
+      const h = String(dateObj.getHours()).padStart(2, '0');
+      const min = String(dateObj.getMinutes()).padStart(2, '0');
+      return `${h}:${min}`;
+    }
+
     function findConflictsForRobbery(item, allList) {
       const itemTime = new Date(item.time).getTime();
       const bankConfig = BANKS.find(b => b.name === item.bank) || { cdHours: 24 };
       const sameBankCdMs = bankConfig.cdHours * 60 * 60 * 1000;
-      const diffBankCdMs = 60 * 60 * 1000; // 1 ora
+      const diffBankCdMs = 60 * 60 * 1000;
 
       const conflicts = [];
 
@@ -495,14 +553,32 @@ Data/ora: 26.10.2026 00:30</pre>
       }
     }
 
-    function findNearestFree() {
+    function getBaseSearchDate() {
+      // Punctul de pornire pentru căutare este data/ora curentă reală
+      const now = new Date();
+      // Rotunjim la următorul sfert sau jumătate de oră
+      const minutes = now.getMinutes();
+      const roundedMinutes = Math.ceil(minutes / 30) * 30;
+      now.setMinutes(roundedMinutes, 0, 0);
+      return now;
+    }
+
+    function findNearestFree(fromNow = true) {
       const bank = document.getElementById('calcBank').value;
-      const dateVal = document.getElementById('calcDate').value || new Date().toISOString().slice(0, 10);
-      const timeVal = parseTime24(document.getElementById('calcTime').value) || "22:00";
+      
+      // Dacă căutăm primul liber, plecăm MEREU de la momentul actual (NOW),
+      // NU de la data viitoare rămasă în căsuță de la altă bancă!
+      let checkDate;
+      if (fromNow) {
+        checkDate = getBaseSearchDate();
+      } else {
+        const dateVal = document.getElementById('calcDate').value;
+        const timeVal = parseTime24(document.getElementById('calcTime').value) || "00:00";
+        checkDate = dateVal ? new Date(`${dateVal}T${timeVal}`) : getBaseSearchDate();
+      }
 
-      let checkDate = new Date(`${dateVal}T${timeVal}`);
-
-      for (let i = 0; i < 48 * 7; i++) {
+      // Verificăm pe o perioadă de până la 14 zile înainte (din 30 în 30 min)
+      for (let i = 0; i < 48 * 14; i++) {
         const res = checkSlotConflict(bank, checkDate.getTime());
         if (!res.conflict) {
           const y = checkDate.getFullYear();
@@ -518,7 +594,7 @@ Data/ora: 26.10.2026 00:30</pre>
         }
         checkDate = new Date(checkDate.getTime() + 30 * 60 * 1000);
       }
-      alert("Nu s-a găsit un slot liber rapid în următoarele zile.");
+      alert("Nu s-a găsit un slot liber rapid în următoarele 14 zile.");
     }
 
     function updateDiscordOutput(bank, dateObj) {
@@ -545,6 +621,122 @@ Data/ora: ${formatRO(dateObj)}`;
       document.getElementById('calcBank').value = bankName;
       findNearestFree();
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Funcție pentru a alege direct o fereastră liberă
+    function pickWindowSlot(bankName, isoDatetime) {
+      const d = new Date(isoDatetime);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+
+      document.getElementById('calcBank').value = bankName;
+      document.getElementById('calcDate').value = `${y}-${m}-${day}`;
+      document.getElementById('calcTime').value = `${hh}:${mm}`;
+      checkSlotManual();
+      window.scrollTo({ top: 400, behavior: 'smooth' });
+    }
+
+    // CALCULATOR AUTOMAT DE FERESTRE LIBERE ÎNTRE JAFURI
+    function renderFreeWindows() {
+      const container = document.getElementById('windowsContainer');
+      container.innerHTML = '';
+
+      if (robberies.length < 2) {
+        container.innerHTML = `<div class="col-span-full py-4 text-center text-zinc-500 text-xs">Ai nevoie de minim 2 jafuri înregistrate pentru a calcula ferestrele dintre ele.</div>`;
+        return;
+      }
+
+      // Sortate strict cronologic
+      const sorted = [...robberies].sort((a, b) => new Date(a.time) - new Date(b.time));
+
+      let foundWindows = 0;
+
+      for (let i = 0; i < sorted.length - 1; i++) {
+        const cur = sorted[i];
+        const next = sorted[i + 1];
+
+        const curTime = new Date(cur.time).getTime();
+        const nextTime = new Date(next.time).getTime();
+
+        // Fereastra legală pe oraș începe la +1h după jaful curent și se termină la -1h înainte de următorul jaf
+        const windowStartMs = curTime + (60 * 60 * 1000);
+        const windowEndMs = nextTime - (60 * 60 * 1000);
+        const diffMs = windowEndMs - windowStartMs;
+
+        // Dacă avem minim 30 minute de pauză reală între ele
+        if (diffMs >= 30 * 60 * 1000) {
+          foundWindows++;
+          const durationHours = (diffMs / (3600 * 1000)).toFixed(1);
+          const startDate = new Date(windowStartMs);
+          const endDate = new Date(windowEndMs);
+
+          // Punctul de mijloc al ferestrei (sau o oră optimă) pentru a testa ce bănci sunt libere
+          const midPointMs = windowStartMs + (diffMs / 2);
+          const midDate = new Date(midPointMs);
+
+          // Verificăm care dintre cele 7 bănci sunt libere la mijlocul acestei ferestre
+          const availableBanks = [];
+          BANKS.forEach(b => {
+            const res = checkSlotConflict(b.name, midPointMs);
+            if (!res.conflict) {
+              availableBanks.push(b.name);
+            }
+          });
+
+          const sameDay = startDate.toDateString() === endDate.toDateString();
+          const dateTitle = `${String(startDate.getDate()).padStart(2, '0')}.${String(startDate.getMonth() + 1).padStart(2, '0')}.${startDate.getFullYear()}`;
+          const timeRange = sameDay 
+            ? `${formatTimeOnly(startDate)} &rarr; ${formatTimeOnly(endDate)}` 
+            : `${formatRO(startDate)} &rarr; ${formatRO(endDate)}`;
+
+          const card = document.createElement('div');
+          card.className = "bg-zinc-900/90 border border-borderCol hover:border-emerald-500/50 rounded-xl p-3.5 flex flex-col justify-between transition space-y-3";
+
+          let banksBadgesHtml = '';
+          if (availableBanks.length > 0) {
+            banksBadgesHtml = availableBanks.map(bName => `
+              <button onclick="pickWindowSlot('${bName}', '${midDate.toISOString()}')" class="text-[11px] bg-emerald-950/70 hover:bg-emerald-900 text-emerald-300 border border-emerald-800/80 px-2 py-0.5 rounded transition font-medium">
+                + ${bName}
+              </button>
+            `).join(' ');
+          } else {
+            banksBadgesHtml = '<span class="text-zinc-500 text-[11px] italic">Nicio bancă legală (cooldown-uri de 24h active)</span>';
+          }
+
+          card.innerHTML = `
+            <div>
+              <div class="flex justify-between items-center text-xs text-zinc-400 pb-1 border-b border-borderCol/60">
+                <span class="font-bold text-white flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  ${dateTitle}
+                </span>
+                <span class="bg-zinc-800 text-emerald-400 px-2 py-0.5 rounded text-[10px] font-mono font-bold">${durationHours} ore libere</span>
+              </div>
+              <div class="mt-2">
+                <div class="text-sm font-bold text-brand font-mono">${timeRange}</div>
+                <div class="text-[11px] text-zinc-400 mt-1">
+                  Între: <span class="text-zinc-300 font-semibold">${cur.bank}</span> (${cur.mafia}) și <span class="text-zinc-300 font-semibold">${next.bank}</span> (${next.mafia})
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-borderCol/60">
+              <div class="text-[10px] text-zinc-400 uppercase font-semibold mb-1.5">Bănci permise în această pauză:</div>
+              <div class="flex flex-wrap gap-1.5">
+                ${banksBadgesHtml}
+              </div>
+            </div>
+          `;
+          container.appendChild(card);
+        }
+      }
+
+      if (foundWindows === 0) {
+        container.innerHTML = `<div class="col-span-full py-4 text-center text-zinc-500 text-xs">Nu există nicio fereastră liberă de minim 1h între jafuri.</div>`;
+      }
     }
 
     function renderLatestBanner() {
@@ -579,6 +771,7 @@ Data/ora: ${formatRO(dateObj)}`;
 
     function render() {
       renderLatestBanner();
+      renderFreeWindows();
 
       // 1. Status Bănci
       const statusBody = document.getElementById('bankStatusBody');
@@ -641,7 +834,6 @@ Data/ora: ${formatRO(dateObj)}`;
         const startCd = new Date(d.getTime() - bankConfig.cdHours * 3600 * 1000);
         const endCd = new Date(d.getTime() + bankConfig.cdHours * 3600 * 1000);
 
-        // Verificăm dacă acest jaf se intersectează cu oricare altul din tabel
         const conflicts = findConflictsForRobbery(r, robberies);
         const hasConflict = conflicts.length > 0;
 
@@ -659,7 +851,6 @@ Data/ora: ${formatRO(dateObj)}`;
         const isLatest = r.id === latestObj.id;
         const latestBadge = isLatest ? '<span class="ml-2 px-1.5 py-0.5 rounded text-[10px] bg-brand/20 text-brand border border-brand/40 font-bold uppercase">Ultimul adăugat</span>' : '';
 
-        // Status Badge & Styling diferențiat pentru conflicte
         let statusBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-emerald-950/60 text-emerald-400 border border-emerald-800"><span>✓</span> Valid (OK)</span>';
         let rowClass = "hover:bg-zinc-800/30 transition";
 
@@ -700,7 +891,6 @@ Data/ora: ${formatRO(dateObj)}`;
         tbody.appendChild(tr);
       });
 
-      // Afișăm bannerul global de alertă dacă există măcar un conflict în listă
       const alertBox = document.getElementById('conflictsAlertBox');
       const listEl = document.getElementById('conflictsList');
       if (conflictMessagesGlobal.length > 0) {
