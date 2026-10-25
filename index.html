@@ -1391,7 +1391,6 @@ Data/ora: ${formatRO(dateObj)}`;
 
         visibleRowsCount++;
         const bankConfig = BANKS.find(b => b.name === r.bank) || { cdHours: 24 };
-        const d = new Date(r.time);
         const startCd = new Date(d.getTime() - bankConfig.cdHours * 3600 * 1000);
         const endCd = new Date(d.getTime() + bankConfig.cdHours * 3600 * 1000);
 
