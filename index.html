@@ -319,6 +319,27 @@ Data/ora: 26.10.2026 00:30</pre>
       </div>
     </div>
 
+        <!-- Cititor Rapid Mesaj Discord -->
+    <div class="bg-cardBg border border-blue-500/30 rounded-2xl p-5 shadow-xl space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-bold text-white flex items-center gap-2">
+          <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+          Cititor Semi-Automat (Paste Mesaj Discord)
+          <span class="text-[11px] bg-blue-950 text-blue-400 px-2 py-0.5 rounded-full border border-blue-800">Auto-Detect</span>
+        </h2>
+        <span class="text-xs text-zinc-400">Recunoaște automat Banca, Mafia, Data și Ora</span>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3">
+        <textarea id="quickDiscordInput" rows="2" placeholder="Lipește aici mesajul copiat de pe Discord (ex: Banca: Burton | Mafia: @Corona Nera | Data/ora: 26.10.2026 23:00)..." class="flex-1 bg-black/60 border border-borderCol rounded-xl p-3 text-xs font-mono text-zinc-200 focus:outline-none focus:border-blue-500 transition"></textarea>
+        <button onclick="handleQuickDiscordParse()" class="sm:w-48 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-4 py-3 rounded-xl transition shadow-lg shadow-blue-900/30 flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          Parsare & Adăugare
+        </button>
+      </div>
+      <div id="quickDiscordFeedback" class="text-xs hidden font-medium"></div>
+    </div>
+
     <!-- Adăugare jaf manual + Tabel Evidență -->
     <div class="bg-cardBg border border-borderCol rounded-2xl p-6 shadow-xl space-y-6">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -1109,8 +1130,22 @@ Data/ora: ${formatRO(dateObj)}`;
           lastInfo = `<div><span class="text-white font-medium">${formatRO(robDate)}</span> <span class="text-zinc-400">(${lastRobbery.mafia})</span></div>`;
           
           const nowMs = Date.now();
-          if (cooldownEnd.getTime() > nowMs) {
-            statusBadge = `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-950/60 text-amber-400 border border-amber-800">EXPIRĂ: ${formatRO(cooldownEnd)}</span>`;
+          const diffRemaining = cooldownEnd.getTime() - nowMs;
+          if (diffRemaining > 0) {
+            const hRem = Math.floor(diffRemaining / (3600 * 1000));
+            const mRem = Math.floor((diffRemaining % (3600 * 1000)) / (60 * 1000));
+            const sRem = Math.floor((diffRemaining % (60 * 1000)) / 1000);
+            const timeStr = `${String(hRem).padStart(2, '0')}h ${String(mRem).padStart(2, '0')}m ${String(sRem).padStart(2, '0')}s`;
+            
+            statusBadge = `
+              <div class="flex flex-col items-start gap-1">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono font-bold bg-amber-950/70 text-amber-300 border border-amber-700/80 shadow">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+                  EXPIRĂ ÎN: ${timeStr}
+                </span>
+                <span class="text-[11px] text-zinc-400 font-mono">la ${formatRO(cooldownEnd)}</span>
+              </div>
+            `;
           }
         }
 
@@ -1216,6 +1251,59 @@ Data/ora: ${formatRO(dateObj)}`;
       } else {
         alertBox.classList.add('hidden');
       }
+    }
+
+    
+    // Ticking live countdown every second for bank cooldowns
+    setInterval(() => {
+      renderBankStatusOnly();
+    }, 1000);
+
+    function renderBankStatusOnly() {
+      const statusBody = document.getElementById('bankStatusBody');
+      if (!statusBody) return;
+      
+      const nowMs = Date.now();
+      
+      BANKS.forEach((b, idx) => {
+        const bankRobberies = robberies.filter(r => r.bank.toLowerCase() === b.name.toLowerCase());
+        let lastRobbery = null;
+        if (bankRobberies.length > 0) {
+          lastRobbery = [...bankRobberies].sort((x, y) => new Date(y.time) - new Date(x.time))[0];
+        }
+
+        let statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-950/60 text-emerald-400 border border-emerald-800">LIBERĂ ACUM</span>';
+
+        if (lastRobbery) {
+          const robDate = new Date(lastRobbery.time);
+          const cooldownEnd = new Date(robDate.getTime() + b.cdHours * 3600 * 1000);
+          const diffRemaining = cooldownEnd.getTime() - nowMs;
+          if (diffRemaining > 0) {
+            const hRem = Math.floor(diffRemaining / (3600 * 1000));
+            const mRem = Math.floor((diffRemaining % (3600 * 1000)) / (60 * 1000));
+            const sRem = Math.floor((diffRemaining % (60 * 1000)) / 1000);
+            const timeStr = `${String(hRem).padStart(2, '0')}h ${String(mRem).padStart(2, '0')}m ${String(sRem).padStart(2, '0')}s`;
+            
+            statusBadge = `
+              <div class="flex flex-col items-start gap-1">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono font-bold bg-amber-950/70 text-amber-300 border border-amber-700/80 shadow">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+                  EXPIRĂ ÎN: ${timeStr}
+                </span>
+                <span class="text-[11px] text-zinc-400 font-mono">la ${formatRO(cooldownEnd)}</span>
+              </div>
+            `;
+          }
+        }
+
+        // Update the cell in statusBody
+        if (statusBody.children[idx]) {
+          const cells = statusBody.children[idx].children;
+          if (cells[3]) {
+            cells[3].innerHTML = statusBadge;
+          }
+        }
+      });
     }
 
     window.addEventListener('DOMContentLoaded', init);
