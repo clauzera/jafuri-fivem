@@ -1042,6 +1042,44 @@ Data/ora: 26.10.2026 00:30</pre>
       return { conflict: false };
     }
 
+    function getSlotBounds(targetBank, targetMs) {
+      const bankConfig = BANKS.find(b => b.name === targetBank) || { cdHours: 24 };
+      const bankCdMs = bankConfig.cdHours * 3600 * 1000;
+      const townCdMs = 60 * 60 * 1000;
+
+      let lowerMs = null;
+      let lowerDetail = null;
+      let upperMs = null;
+      let upperDetail = null;
+
+      robberies.forEach(r => {
+        const rTime = new Date(r.time).getTime();
+        const isSameBank = r.bank.toLowerCase() === targetBank.toLowerCase();
+        const cdNeeded = isSameBank ? bankCdMs : townCdMs;
+        const rDate = new Date(r.time);
+
+        if (rTime <= targetMs) {
+          const bound = rTime + cdNeeded;
+          if (lowerMs === null || bound > lowerMs) {
+            lowerMs = bound;
+            lowerDetail = isSameBank 
+              ? `la +${bankConfig.cdHours}h după ${r.bank} (${r.mafia}) de la ${formatTimeOnly(rDate)}` 
+              : `la +1h pauză oraș după ${r.bank} (${r.mafia}) de la ${formatTimeOnly(rDate)}`;
+          }
+        } else {
+          const bound = rTime - cdNeeded;
+          if (upperMs === null || bound < upperMs) {
+            upperMs = bound;
+            upperDetail = isSameBank 
+              ? `cu ${bankConfig.cdHours}h înainte de ${r.bank} (${r.mafia}) de la ${formatTimeOnly(rDate)}` 
+              : `cu 1h pauză oraș înainte de ${r.bank} (${r.mafia}) de la ${formatTimeOnly(rDate)}`;
+          }
+        }
+      });
+
+      return { lowerMs, lowerDetail, upperMs, upperDetail };
+    }
+
     function checkSlotManual() {
       const bank = document.getElementById('calcBank').value;
       const dateVal = document.getElementById('calcDate').value;
@@ -1062,8 +1100,77 @@ Data/ora: 26.10.2026 00:30</pre>
         resBox.classList.add('bg-red-950/60', 'text-red-300', 'border', 'border-red-900');
         resBox.innerHTML = `<strong>BLOCAT / CONFLICT:</strong><br>${res.reason}`;
       } else {
+        const bounds = getSlotBounds(bank, targetMs);
+        
+        let intervalHtml = '';
+        if (bounds.lowerMs !== null && bounds.upperMs !== null) {
+          const minD = new Date(bounds.lowerMs);
+          const maxD = new Date(bounds.upperMs);
+          const sameDay = minD.toDateString() === maxD.toDateString();
+          const timeRangeStr = sameDay 
+            ? `${formatTimeOnly(minD)} – ${formatTimeOnly(maxD)}` 
+            : `${formatRO(minD)} – ${formatRO(maxD)}`;
+          
+          const diffMinutes = Math.round((bounds.upperMs - bounds.lowerMs) / 60000);
+          const diffHours = (diffMinutes / 60).toFixed(1);
+          const windowDurationStr = diffMinutes >= 60 ? `${diffHours} ore` : `${diffMinutes} minute`;
+
+          if (bounds.lowerMs === bounds.upperMs) {
+            intervalHtml = `
+              <div class="mt-2.5 pt-2 border-t border-brand/30">
+                <div class="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">Interval Fix Disponibil:</div>
+                <div class="text-base font-extrabold font-mono text-white mt-0.5">Exact ${formatRO(minD)}</div>
+                <div class="text-[11px] text-zinc-300 mt-1">* Fix la minut între jafuri.</div>
+              </div>
+            `;
+          } else {
+            intervalHtml = `
+              <div class="mt-2.5 pt-2.5 border-t border-brand/30 space-y-2">
+                <div>
+                  <div class="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">Interval Disponibil (Minim &rarr; Maxim):</div>
+                  <div class="text-base font-extrabold font-mono text-white flex items-center gap-2 mt-1">
+                    <span class="bg-black/70 px-2.5 py-1 rounded-lg border border-emerald-500/60 text-emerald-300 shadow">${timeRangeStr}</span>
+                    <span class="text-xs text-zinc-400 font-sans font-normal">(${windowDurationStr} libere)</span>
+                  </div>
+                </div>
+                <div class="text-[11px] text-zinc-300 space-y-1 bg-black/40 p-2.5 rounded-lg border border-borderCol/50 font-sans">
+                  <div>• <strong>Minim (de la):</strong> <span class="text-emerald-300 font-mono font-bold">${formatTimeOnly(minD)}</span> <span class="text-zinc-400">(${bounds.lowerDetail})</span></div>
+                  <div>• <strong>Maxim (până la):</strong> <span class="text-emerald-300 font-mono font-bold">${formatTimeOnly(maxD)}</span> <span class="text-zinc-400">(${bounds.upperDetail})</span></div>
+                </div>
+              </div>
+            `;
+          }
+        } else if (bounds.upperMs !== null) {
+          const maxD = new Date(bounds.upperMs);
+          intervalHtml = `
+            <div class="mt-2.5 pt-2 border-t border-brand/30 text-xs">
+              <div class="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">Ora Maximă Posibilă:</div>
+              <div class="font-bold text-white text-sm font-mono mt-0.5">Până la ${formatRO(maxD)}</div>
+              <div class="text-[10px] text-zinc-400 mt-0.5 font-sans">(${bounds.upperDetail})</div>
+            </div>
+          `;
+        } else if (bounds.lowerMs !== null) {
+          const minD = new Date(bounds.lowerMs);
+          intervalHtml = `
+            <div class="mt-2.5 pt-2 border-t border-brand/30 text-xs">
+              <div class="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">Ora Minimă Posibilă:</div>
+              <div class="font-bold text-white text-sm font-mono mt-0.5">De la ${formatRO(minD)} încolo</div>
+              <div class="text-[10px] text-zinc-400 mt-0.5 font-sans">(${bounds.lowerDetail})</div>
+            </div>
+          `;
+        }
+
         resBox.classList.add('bg-brand/10', 'text-brand', 'border', 'border-brand/40');
-        resBox.innerHTML = `<strong>SLOT DISPONIBIL!</strong><br>Poți programa ${bank} la ${formatRO(new Date(targetMs))}.`;
+        resBox.innerHTML = `
+          <div class="flex items-center gap-1.5 font-bold text-xs uppercase tracking-wide text-brand">
+            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            Slot Disponibil!
+          </div>
+          <div class="text-xs text-zinc-200 mt-1">
+            Poți programa <strong class="text-white">${bank}</strong> la <strong class="text-brand font-mono">${formatRO(new Date(targetMs))}</strong>.
+          </div>
+          ${intervalHtml}
+        `;
         updateDiscordOutput(bank, new Date(targetMs));
       }
     }
