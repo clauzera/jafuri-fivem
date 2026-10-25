@@ -389,6 +389,20 @@ Data/ora: 26.10.2026 00:30</pre>
         </div>
       </form>
 
+            <!-- Bara de filtrare & arhivare jafuri trecute -->
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pt-2">
+        <div class="text-xs text-zinc-400 flex items-center gap-2">
+          <span class="font-semibold text-white">Evidență Tabel:</span>
+          <span id="tableStatsBadge" class="bg-zinc-900 border border-borderCol px-2.5 py-1 rounded-lg font-mono text-[11px] text-zinc-300">
+            Se calculează...
+          </span>
+        </div>
+        <button id="togglePastRobberiesBtn" onclick="toggleHidePastRobberies()" class="px-3.5 py-1.5 text-xs rounded-lg transition font-semibold flex items-center gap-1.5 border border-borderCol bg-zinc-800 hover:bg-zinc-700 text-zinc-300">
+          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+          <span id="togglePastBtnText">Ascunde jafurile trecute</span>
+        </button>
+      </div>
+
       <!-- Tabelul cu jafurile existente -->
       <div class="overflow-x-auto rounded-xl border border-borderCol">
         <table class="w-full text-left text-sm">
@@ -449,6 +463,15 @@ Data/ora: 26.10.2026 00:30</pre>
     ];
 
     let robberies = [];
+
+    let hidePastRobberies = localStorage.getItem('fivem_hide_past_lowline') === 'true';
+
+    function toggleHidePastRobberies() {
+      hidePastRobberies = !hidePastRobberies;
+      localStorage.setItem('fivem_hide_past_lowline', hidePastRobberies ? 'true' : 'false');
+      render();
+    }
+
     let isCloudConnected = false;
     let firestoreDb = null;
     let unsubscribeFirestore = null;
@@ -1322,6 +1345,28 @@ Data/ora: ${formatRO(dateObj)}`;
       const tbody = document.getElementById('robberiesTableBody');
       tbody.innerHTML = '';
 
+      const nowMs = Date.now();
+      const pastCount = robberies.filter(r => new Date(r.time).getTime() < nowMs).length;
+      const futureCount = robberies.length - pastCount;
+
+      // Actualizare buton & statistici arhivare
+      const statsBadge = document.getElementById('tableStatsBadge');
+      if (statsBadge) {
+        statsBadge.innerHTML = `Total: <strong class="text-white">${robberies.length}</strong> | Active/Viitoare: <strong class="text-brand">${futureCount}</strong> | Trecute: <strong class="text-zinc-400">${pastCount}</strong>`;
+      }
+
+      const toggleBtn = document.getElementById('togglePastRobberiesBtn');
+      const toggleBtnText = document.getElementById('togglePastBtnText');
+      if (toggleBtn && toggleBtnText) {
+        if (hidePastRobberies) {
+          toggleBtn.className = "px-3.5 py-1.5 text-xs rounded-lg transition font-semibold flex items-center gap-1.5 border border-amber-600/50 bg-amber-950/40 hover:bg-amber-900/50 text-amber-300 shadow-sm";
+          toggleBtnText.textContent = `Arată și jafurile trecute (${pastCount} ascunse)`;
+        } else {
+          toggleBtn.className = "px-3.5 py-1.5 text-xs rounded-lg transition font-semibold flex items-center gap-1.5 border border-borderCol bg-zinc-800 hover:bg-zinc-700 text-zinc-300";
+          toggleBtnText.textContent = `Arhivează / Ascunde jafurile trecute (${pastCount})`;
+        }
+      }
+
       if (robberies.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-zinc-500">Nu există niciun jaf înregistrat. Adaugă unul mai sus.</td></tr>`;
         document.getElementById('conflictsAlertBox').classList.add('hidden');
@@ -1331,9 +1376,20 @@ Data/ora: ${formatRO(dateObj)}`;
       const latestObj = [...robberies].sort((a, b) => (b.createdAt || b.id) - (a.createdAt || a.id))[0];
       const conflictMessagesGlobal = [];
 
+      // Sortare descrescătoare
       const displayRobberies = [...robberies].sort((a, b) => new Date(b.time) - new Date(a.time));
+      let visibleRowsCount = 0;
 
       displayRobberies.forEach(r => {
+        const d = new Date(r.time);
+        const isPast = d.getTime() < nowMs;
+
+        // Dacă utilizatorul a activat ascunderea jafurilor trecute, nu randăm rândul
+        if (hidePastRobberies && isPast) {
+          return;
+        }
+
+        visibleRowsCount++;
         const bankConfig = BANKS.find(b => b.name === r.bank) || { cdHours: 24 };
         const d = new Date(r.time);
         const startCd = new Date(d.getTime() - bankConfig.cdHours * 3600 * 1000);
@@ -1355,6 +1411,7 @@ Data/ora: ${formatRO(dateObj)}`;
         const tagPaleto = isPaleto ? '<span class="text-xs ml-1 text-amber-400 font-semibold">[72h]</span>' : '';
         const isLatest = r.id === latestObj.id;
         const latestBadge = isLatest ? '<span class="ml-2 px-1.5 py-0.5 rounded text-[10px] bg-brand/20 text-brand border border-brand/40 font-bold uppercase">Ultimul adăugat</span>' : '';
+        const pastBadge = isPast ? '<span class="ml-1.5 px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-400 border border-zinc-700 font-mono">TRECUT</span>' : '';
 
         let statusBadge = '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-emerald-950/60 text-emerald-400 border border-emerald-800"><span>✓</span> Valid (OK)</span>';
         let rowClass = "hover:bg-zinc-800/30 transition";
@@ -1376,7 +1433,7 @@ Data/ora: ${formatRO(dateObj)}`;
         tr.className = rowClass;
         tr.innerHTML = `
           <td class="py-3 px-4 font-semibold text-white">
-            ${r.bank} ${tagPaleto} ${latestBadge}
+            ${r.bank} ${tagPaleto} ${latestBadge} ${pastBadge}
           </td>
           <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-xs bg-zinc-800 text-zinc-300 font-medium">${r.mafia}</span></td>
           <td class="py-3 px-4 font-bold ${hasConflict ? 'text-red-400' : 'text-brand'} font-mono">${formatRO(d)}</td>
@@ -1395,6 +1452,10 @@ Data/ora: ${formatRO(dateObj)}`;
         `;
         tbody.appendChild(tr);
       });
+
+      if (visibleRowsCount === 0 && robberies.length > 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-zinc-400 text-xs">Toate cele ${robberies.length} jafuri sunt din trecut și au fost arhivate vizual. Apasă pe <strong>„Arată și jafurile trecute”</strong> de mai sus pentru a le revedea.</td></tr>`;
+      }
 
       const alertBox = document.getElementById('conflictsAlertBox');
       const listEl = document.getElementById('conflictsList');
