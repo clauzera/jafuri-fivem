@@ -656,6 +656,159 @@ Data/ora: 26.10.2026 00:30</pre>
     // ==========================================
     
 
+
+    // ==========================================
+    // CITITOR SEMI-AUTOMAT TEXT DISCORD
+    // ==========================================
+    function parseDiscordText(text) {
+      const banksMap = {
+        "dusty": "Dusty",
+        "burton": "Burton",
+        "pillbox": "Pillbox",
+        "highway": "Highway",
+        "paleto": "Paleto",
+        "fleeca": "Fleeca centrala",
+        "cartele": "Cartele",
+        "cartel": "Cartele"
+      };
+
+      const clean = text.replace(/[*_`]/g, '');
+      const lines = clean.split(/\r?\n/);
+
+      const entries = [];
+      let currBank = null;
+      let currMafia = null;
+      let currTime = null;
+
+      for (let i = 0; i < lines.length; i++) {
+        const l = lines[i].trim();
+        if (!l) continue;
+
+        // Căutare Bancă
+        const bMatch = l.match(/(?:banc[aă]|loca[tț]ie)\s*[:=\s]*([a-zA-Z\s]+)/i);
+        if (bMatch) {
+          const rawB = bMatch[1].toLowerCase().trim();
+          let matched = null;
+          const bankKeys = ["paleto", "pillbox", "highway", "burton", "dusty", "fleeca", "cartele", "cartel"];
+          for (let k = 0; k < bankKeys.length; k++) {
+            if (rawB.includes(bankKeys[k])) {
+              matched = banksMap[bankKeys[k]];
+              break;
+            }
+          }
+
+          if (matched) {
+            if (currBank && currTime) {
+              entries.push({ bank: currBank, mafia: currMafia || "@LOWLiNE", time: currTime });
+              currBank = null;
+              currMafia = null;
+              currTime = null;
+            }
+            currBank = matched;
+          }
+        }
+
+        // Căutare Mafie
+        const mMatch = l.match(/(?:mafi[ae]|gang)\s*[:=\s]*(.+)/i);
+        if (mMatch) {
+          currMafia = mMatch[1].trim();
+        } else if (l.startsWith('@') && !currMafia) {
+          currMafia = l.trim();
+        }
+
+        // Căutare Dată și Oră
+        const dMatch = l.match(/(\d{1,2})[./\-](\d{1,2})(?:[./\-](\d{2,4}))?[\s\/\-]+(\d{1,2}):(\d{2})/);
+        if (dMatch) {
+          const day = dMatch[1].padStart(2, '0');
+          const month = dMatch[2].padStart(2, '0');
+          let year = dMatch[3];
+          if (!year || year.length === 2) {
+            year = year ? ("20" + year) : "2026";
+          }
+          const hour = dMatch[4].padStart(2, '0');
+          const minute = dMatch[5].padStart(2, '0');
+
+          currTime = `${year}-${month}-${day}T${hour}:${minute}`;
+        }
+
+        if (currBank && currTime) {
+          entries.push({ bank: currBank, mafia: currMafia || "@LOWLiNE", time: currTime });
+          currBank = null;
+          currMafia = null;
+          currTime = null;
+        }
+      }
+
+      if (currBank && currTime) {
+        entries.push({ bank: currBank, mafia: currMafia || "@LOWLiNE", time: currTime });
+      }
+
+      return entries;
+    }
+
+    function handleQuickDiscordParse() {
+      const inputEl = document.getElementById('quickDiscordInput');
+      const input = inputEl.value;
+      const feedback = document.getElementById('quickDiscordFeedback');
+      feedback.classList.remove('hidden', 'text-red-400', 'text-emerald-400', 'bg-red-950/60', 'bg-emerald-950/60', 'border', 'border-red-800', 'border-emerald-800');
+
+      if (!input.trim()) {
+        feedback.textContent = "Te rog lipește mai întâi textul de pe Discord în căsuță.";
+        feedback.classList.add('text-red-400', 'bg-red-950/60', 'border', 'border-red-800', 'p-2', 'rounded-lg');
+        feedback.classList.remove('hidden');
+        return;
+      }
+
+      const parsed = parseDiscordText(input);
+      if (parsed.length === 0) {
+        feedback.textContent = "Nu s-a putut detecta jaful! Asigură-te că textul conține 'Banca: ...', 'Mafia: ...' și 'Data/ora: ...'.";
+        feedback.classList.add('text-red-400', 'bg-red-950/60', 'border', 'border-red-800', 'p-2', 'rounded-lg');
+        feedback.classList.remove('hidden');
+        return;
+      }
+
+      let addedCount = 0;
+      let duplicateCount = 0;
+      let baseId = Date.now();
+
+      parsed.forEach((item, idx) => {
+        const exists = robberies.some(r => r.bank.toLowerCase() === item.bank.toLowerCase() && r.time === item.time);
+        if (!exists) {
+          robberies.push({
+            id: baseId + idx,
+            bank: item.bank,
+            mafia: item.mafia,
+            time: item.time,
+            createdAt: baseId + idx
+          });
+          addedCount++;
+        } else {
+          duplicateCount++;
+        }
+      });
+
+      robberies.sort((a, b) => new Date(a.time) - new Date(b.time));
+      commitDataUpdate();
+
+      inputEl.value = '';
+      let msg = "";
+      if (addedCount > 0) {
+        msg = `✓ Succes! ${addedCount} ${addedCount === 1 ? 'jaf adăugat' : 'jafuri adăugate'} automat în sistem.`;
+        if (duplicateCount > 0) msg += ` (${duplicateCount} jafuri existau deja).`;
+        feedback.classList.add('text-emerald-400', 'bg-emerald-950/60', 'border', 'border-emerald-800', 'p-2', 'rounded-lg');
+      } else {
+        msg = `Toate jafurile din text (${duplicateCount}) existau deja în tabel!`;
+        feedback.classList.add('text-amber-400', 'bg-amber-950/60', 'border', 'border-amber-800', 'p-2', 'rounded-lg');
+      }
+
+      feedback.textContent = msg;
+      feedback.classList.remove('hidden');
+
+      setTimeout(() => {
+        feedback.classList.add('hidden');
+      }, 5000);
+    }
+
     function openClearModal() {
       document.getElementById('clearConfirmModal').classList.remove('hidden');
     }
